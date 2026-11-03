@@ -1,0 +1,38 @@
+name: Instagram 카드뉴스 생성
+
+on:
+  push:
+    paths:
+      - "instagram/posts.yaml"
+      - "instagram/scripts/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: instagram
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: instagram/requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: instagram/.fonts
+          key: noto-fonts-v1
+      - run: pip install -r instagram/requirements.txt
+      - run: python instagram/scripts/generate.py
+      - name: 생성된 이미지 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add instagram/output
+          git diff --cached --quiet || (git commit -m "chore(instagram): 카드뉴스 이미지 재생성" && git push)
